@@ -13,22 +13,22 @@ A Streamlit-based web application that allows users to interact with Google's Ge
 To run this application, you need to install the following Python packages. These are listed in the `requirements.txt` file included in the repository.
 
 ```
-google-generativeai==0.8.3
-python-dotenv==1.0.1
-Pillow==10.4.0
-streamlit==1.39.0
-PyPDF2==3.0.1
-whisper==0.0.1
-sounddevice==0.5.0
-numpy==2.1.1
-scipy==1.14.1
+google-generativeai
+python-dotenv
+Pillow
+streamlit
+PyPDF2
+whisper
+sounddevice
+numpy
+scipy
 ```
 
 ## Installation
 1. **Clone the Repository**:
    ```bash
-   git clone <repository-url>
-   cd <repository-directory>
+   git clone https://github.com/DagaBhai/qna-chatbot.git
+   cd DagaBhai/qna-chatbot
    ```
 
 2. **Set Up a Virtual Environment** (recommended):
