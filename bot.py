@@ -83,7 +83,7 @@ def read_pdf(file):
         
 @st.cache_resource
 def load_model():
-    return whisper.load_model("base")
+    return whisper.load_model("tiny")
 
 model = load_model()
 
@@ -181,4 +181,5 @@ def main():
                 
 if __name__ == '__main__':
     main()
+
 
