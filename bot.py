@@ -80,7 +80,8 @@ def read_pdf(file):
     except Exception as e:
         st.error(f"Error reading PDF: {e}")
         return None
-
+        
+@st.cache_resource
 def load_model():
     return whisper.load_model("base")
 
@@ -180,3 +181,4 @@ def main():
                 
 if __name__ == '__main__':
     main()
+
