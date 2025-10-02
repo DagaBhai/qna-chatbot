@@ -3,7 +3,7 @@ python-dotenv
 Pillow
 streamlit
 PyPDF2
-openai-
+openai-whisper
 audiorecorder
 sounddevice
 numpy
