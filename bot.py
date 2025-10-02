@@ -2,16 +2,12 @@ import google.generativeai as genai
 import base64
 import io
 import os
-import tempfile
-from dotenv import load_dotenv 
+from dotenv import load_dotenv    
 from PIL import Image
 import streamlit as st
 from PyPDF2 import PdfReader
+from audiorecorder import audiorecorder
 import whisper
-
-import sounddevice as sd
-import numpy as np
-import scipy.io.wavfile
 
 st.set_page_config(page_title="Ask me anything I'll let you know", layout="centered")
 st.title("💬 Gemini General QnA Chatbot")
@@ -21,14 +17,17 @@ load_dotenv()
 API_KEY = os.getenv("api_key")
 
 def initialize_gemini_chat():
+    """Initializes the Gemini model and chat session."""
     try:
         genai.configure(api_key=API_KEY)
         model = genai.GenerativeModel('gemini-2.5-flash')
+        # Initialize the chat session and store it in session_state
         st.session_state.chat = model.start_chat(history=[])
+        # Also initialize a list to store the displayable messages
         st.session_state.messages = []
     except Exception as e:
         st.error(f"Failed to initialize Gemini: {e}")
-        st.session_state.chat = None
+        st.session_state.chat = None # Set to None if initialization fails
 
 def encode_image_to_base64(image_file):
     try:
@@ -42,9 +41,9 @@ def encode_image_to_base64(image_file):
 
 def get_choice():
     choice=st.sidebar.radio("Choose:", ["Converse with Gemini 2.5",
-                                         "Chat with a PDF",
-                                         "Chat with an image",
-                                         "Chat with Voice",])
+                                          "Chat with a PDF",
+                                          "Chat with an image",
+                                          "Chat with Voice",])
     return choice
 
 def process_prompt(prompt):
@@ -59,10 +58,13 @@ def process_prompt(prompt):
                 }
             })
 
+    # Generate response
     with st.spinner("Thinking..."):
         try:
+            # Use the chat object stored in session_state
             response_message = st.session_state.chat.send_message(gemini_input)
             chatbot_response = response_message.text
+            # 4. Store and display the assistant message
             st.session_state.messages.append({"role": "assistant", "content": chatbot_response})
             with st.chat_message("assistant"):
                 st.markdown(chatbot_response)
@@ -86,46 +88,40 @@ def load_model():
 
 model = load_model()
 
-def transcribe_audio(audio_data, sample_rate):
+def transcribe_audio(audio_bytes):
     with tempfile.NamedTemporaryFile(delete=False, suffix=".wav") as f:
-        temp_filename = f.name
+        f.write(audio_bytes)
+        f.flush()
+        result = model.transcribe(f.name)
+    return result["text"]
     
-    scipy.io.wavfile.write(temp_filename, sample_rate, audio_data)
-    
-    try:
-        result = model.transcribe(temp_filename)
-        return result["text"]
-    finally:
-        os.unlink(temp_filename)
-
-def record_audio(duration=8, sample_rate=16000):
-    st.sidebar.info(f"Recording for {duration} seconds...")
-    recording = sd.rec(int(duration * sample_rate), samplerate=sample_rate, channels=1, dtype='int16')
-    sd.wait()
-    st.sidebar.success("Recording finished!")
-    return recording, sample_rate
-
 def main():
-    SAMPLE_RATE = 16000
-    DURATION = 8
 
     choice = get_choice()
-    
+    # --- Streamlit UI Setup ---
+    # 1. Initialize chat only on the first run
     if "chat" not in st.session_state or st.session_state.chat is None:
         initialize_gemini_chat()
 
     if st.session_state.chat is None:
-        return
+        return # Stop execution if initialization failed
 
+    # --- Display Existing Messages ---
+    # This loop ensures that the history is drawn on every re-run
     for message in st.session_state.messages:
         with st.chat_message(message["role"]):
             st.markdown(message["content"])
 
     if choice=="Converse with Gemini 2.5":
+        # --- Chat Input and Response ---
         if prompt := st.chat_input("Type your message here..."):
+            
+            # Store and display the user message
             st.session_state.messages.append({"role": "user", "content": prompt})
             with st.chat_message("user"):
                 st.markdown(prompt)
+
+            # Prepare input for Gemini
             process_prompt(prompt)
 
     if choice=="Chat with an image":
@@ -135,15 +131,20 @@ def main():
             st.sidebar.image(uploaded_file, caption="Current Uploaded Image", use_container_width=True)
             st.sidebar.info("Image uploaded. Your next message will include this image.")
             if prompt := st.chat_input("Type your message here..."):
+            
+            # Store and display the user message
                 st.session_state.messages.append({"role": "user", "content": prompt})
                 with st.chat_message("user"):
                     st.markdown(prompt)
+
+            # Prepare input for Gemini
                 process_prompt(prompt)
 
         elif uploaded_file is None and "current_uploaded_image" in st.session_state:
             st.session_state.current_uploaded_image = None
             st.sidebar.info("Image cleared.")
         
+    
     if choice=='Chat with a PDF':
         uploaded_file=st.sidebar.file_uploader("Upload Pdf",type=["pdf"],accept_multiple_files=False)
         
@@ -156,27 +157,26 @@ def main():
                     st.session_state.messages.append({"role": "user", "content": prompt})
                     with st.chat_message("user"):
                         st.markdown(prompt)
-                    
+
+                    # Append PDF context to query
                     process_prompt(f"PDF Content:\n{pdf_text}\n\nUser Question: {prompt}")
     
     if choice == "Chat with Voice":
         st.sidebar.header("🎙️ Voice Input")
-
-        if st.sidebar.button(f"Start Recording ({DURATION}s)", key="start_record"):
-            with st.spinner(f"Recording for {DURATION} seconds..."):
-                audio_data, sr = record_audio(duration=DURATION, sample_rate=SAMPLE_RATE)
-            
-            st.audio(audio_data.tobytes(), format='audio/wav', sample_rate=sr)
-
-            user_text = transcribe_audio(audio_data, sr)
-            
+        audio = audiorecorder("Start Recording", "Stop Recording")
+        if len(audio) > 0:
+            st.audio(audio.export().read(), format="audio/wav")
+            audio_bytes = audio.export().read()
+            user_text = transcribe_audio(audio_bytes)
             if user_text.strip():
-                user_content = f"🎧 {user_text}"
-                st.session_state.messages.append({"role": "user", "content": user_content})
+                st.session_state.messages.append({"role": "user", "content": f"🎧 {user_text}"})
                 with st.chat_message("user"):
-                    st.markdown(user_content)
-                
-                process_prompt(user_text)
-                
+                    st.markdown(f"🎧 {user_text}")
+                response = process_prompt(user_text)
+                st.session_state.messages.append({"role": "assistant", "content": response})
+                with st.chat_message("assistant"):
+                    st.markdown(response)
+        
+
 if __name__ == '__main__':
     main()
