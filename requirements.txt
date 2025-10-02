@@ -4,10 +4,10 @@ Pillow
 streamlit
 PyPDF2
 openai-whisper
-streamlit-audiorecorder
 sounddevice
 numpy
 scipy
+
 
 
 
