@@ -6,7 +6,9 @@ PyPDF2
 openai-whisper
 streamlit-audiorecorder
 sounddevice
+pyaudioop
 numpy
 scipy
+
 
 
