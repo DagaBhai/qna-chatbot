@@ -95,9 +95,6 @@ scipy
 - **Audio Issues**: Ensure your system has a microphone and that the `sounddevice` library is properly configured.
 - **PDF Errors**: Ensure the uploaded PDF is not corrupted and contains extractable text.
 
-## License
-This project is licensed under the MIT License. See the [LICENSE](LICENSE) file for details.
-
 ## Acknowledgments
 - Built with [Streamlit](https://streamlit.io/) for the web interface.
 - Powered by [Google Gemini 2.5](https://cloud.google.com/generative-ai) for conversational and vision capabilities.
